@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Auto-évaluation professionnelle | Santé</title>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Font Awesome (icônes médicales) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+/* ================= GLOBAL ================= */
+body {
+  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+  background:
+    linear-gradient(135deg, rgba(224,242,254,0.95), rgba(240,253,244,0.95)),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cg fill='%2310b981' fill-opacity='0.15'%3E%3Cpath d='M60 20v80M20 60h80' stroke='%23059669' stroke-width='6'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: repeat;
+  color: #064e3b;
+  max-width: 1000px;
+  margin: auto;
+  padding: 30px;
+}
+
+/* ================= TITRES ================= */
+h1, h2 {
+  text-align: center;
+  color: #065f46;
+}
+
+h1 i, h2 i {
+  margin-right: 10px;
+  color: #10b981;
+}
+
+/* ================= SECTIONS ================= */
+.section {
+  margin-top: 50px;
+}
+
+.instructions {
+  font-style: italic;
+  color: #047857;
+  text-align: center;
+}
+
+.scale {
+  text-align: center;
+  margin-bottom: 20px;
+  font-weight: bold;
+}
+
+/* ================= QUESTIONS ================= */
+.question {
+  background: rgba(255,255,255,0.95);
+  padding: 20px;
+  margin-bottom: 20px;
+  border-radius: 14px;
+  border-left: 8px solid #10b981;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  transition: transform 0.2s;
+}
+
+.question:hover {
+  transform: translateY(-4px);
+}
+
+/* ================= BOUTON ================= */
+button {
+  display: block;
+  margin: 50px auto;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  border: none;
+  padding: 15px 35px;
+  font-size: 18px;
+  border-radius: 40px;
+  cursor: pointer;
+  box-shadow: 0 12px 25px rgba(16,185,129,0.4);
+}
+
+button:hover {
+  background: linear-gradient(135deg, #059669, #047857);
+}
+
+/* ================= RESULTATS ================= */
+#resultats {
+  margin-top: 50px;
+  background: rgba(255,255,255,0.9);
+  padding: 30px;
+  border-radius: 20px;
+  box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+}
+
+canvas {
+  max-width: 650px;
+  margin: auto;
+  display: block;
+}
+
+/* ================= JAUGE DE STRESS ================= */
+.stress-container {
+  margin: 30px 0;
+}
+
+.stress-label {
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 22px;
+  background: #e5e7eb;
+  border-radius: 30px;
+  overflow: hidden;
+}
+
+.progress {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #22c55e, #facc15, #ef4444);
+  transition: width 1.5s ease-in-out;
+}
+
+/* ================= DISCLAIMER ================= */
+.disclaimer {
+  margin-top: 40px;
+  font-size: 0.9em;
+  text-align: center;
+  color: #065f46;
+}
+</style>
+</head>
+
+<body>
+
+<h1><i class="fa-solid fa-heart-pulse"></i>Auto-évaluation professionnelle</h1>
+
+<p style="text-align:center">
+Outil destiné aux professionnels de santé pour évaluer le stress émotionnel
+et la relation empathique avec les patients.
+</p>
+
+<!-- ================= BURNOUT ================= -->
+<div class="section">
+<h2><i class="fa-solid fa-brain"></i> Burn-out professionnel</h2>
+
+<p class="instructions">
+Indiquez la fréquence correspondant à votre vécu professionnel.
+</p>
+
+<div class="scale">
+0 Jamais · 1 Rarement · 2 Parfois · 3 Souvent · 4 Toujours
+</div>
+
+<div id="burnout"></div>
+</div>
+
+<!-- ================= EMPATHIE ================= -->
+<div class="section">
+<h2><i class="fa-solid fa-hand-holding-heart"></i> Empathie envers les patients</h2>
+
+<div class="scale">
+0 Jamais · 1 Rarement · 2 Parfois · 3 Souvent · 4 Toujours
+</div>
+
+<div id="empathie"></div>
+</div>
+
+<button onclick="evaluer()">
+<i class="fa-solid fa-chart-line"></i> Afficher les résultats
+</button>
+
+<!-- ================= RESULTATS ================= -->
+<div id="resultats">
+  <canvas id="graphique"></canvas>
+
+  <!-- Jauge de stress -->
+  <div class="stress-container">
+    <div class="stress-label">
+      <i class="fa-solid fa-gauge-high"></i> Niveau de stress
+    </div>
+    <div class="progress-bar">
+      <div class="progress" id="stressBar"></div>
+    </div>
+  </div>
+
+  <div id="interpretation"></div>
+</div>
+
+<p class="disclaimer">
+⚠️ Cette auto-évaluation est informative et ne constitue pas un diagnostic médical.
+</p>
+
+<script>
+/* ================= QUESTIONS ================= */
+const burnoutQuestions = [
+  "Je me sens émotionnellement vidé(e) par mon travail.",
+  "Je me sens fatigué(e) lorsque je pense au travail.",
+  "Il m’arrive de traiter certains patients de manière impersonnelle.",
+  "Je ressens peu d’accomplissement professionnel.",
+  "Je suis moins sensible aux émotions des patients."
+];
+
+const empathieQuestions = [
+  "Je comprends les émotions de mes patients.",
+  "Je me sens concerné(e) par la souffrance des patients.",
+  "L’empathie est essentielle aux soins.",
+  "Je perçois les émotions non verbales.",
+  "Je me mets à la place du patient."
+];
+
+function afficherQuestions(questions, containerId, prefix) {
+  const container = document.getElementById(containerId);
+  questions.forEach((q, i) => {
+    let html = `<div class="question"><p>${q}</p>`;
+    for (let v = 0; v <= 4; v++) {
+      html += `<label><input type="radio" name="${prefix}${i}" value="${v}"> ${v}</label>`;
+    }
+    html += `</div>`;
+    container.innerHTML += html;
+  });
+}
+
+afficherQuestions(burnoutQuestions, "burnout", "b");
+afficherQuestions(empathieQuestions, "empathie", "e");
+
+/* ================= CALCUL ================= */
+function calculerScore(prefix, total) {
+  let score = 0;
+  for (let i = 0; i < total; i++) {
+    const choix = document.querySelector(`input[name="${prefix}${i}"]:checked`);
+    if (choix) score += parseInt(choix.value);
+  }
+  return score;
+}
+
+let chartInstance = null;
+
+function evaluer() {
+  const burnoutScore = calculerScore("b", 5);
+  const empathieScore = calculerScore("e", 5);
+
+  // Jauge de stress (%)
+  const stressPercent = Math.min((burnoutScore / 20) * 100, 100);
+  document.getElementById("stressBar").style.width = stressPercent + "%";
+
+  document.getElementById("interpretation").innerHTML = `
+    <h3><i class="fa-solid fa-stethoscope"></i> Interprétation</h3>
+    <p><strong>Burn-out :</strong> ${burnoutScore <= 6 ? "Faible" : burnoutScore <= 13 ? "Modéré" : "Élevé"}</p>
+    <p><strong>Empathie :</strong> ${empathieScore <= 6 ? "Faible" : empathieScore <= 13 ? "Modérée" : "Élevée"}</p>
+  `;
+
+  const ctx = document.getElementById("graphique");
+
+  if (chartInstance) chartInstance.destroy();
+
+  chartInstance = new Chart(ctx, {
+    type: "radar",
+    data: {
+      labels: [
+        "Énergie",
+        "Fatigue",
+        "Relation",
+        "Accomplissement",
+        "Sensibilité"
+      ],
+      datasets: [
+        {
+          label: "Burn-out",
+          data: Array(5).fill(burnoutScore / 5),
+          backgroundColor: "rgba(239,68,68,0.3)",
+          borderColor: "#ef4444"
+        },
+        {
+          label: "Empathie",
+          data: Array(5).fill(empathieScore / 5),
+          backgroundColor: "rgba(16,185,129,0.35)",
+          borderColor: "#10b981"
+        }
+      ]
+    },
+    options: {
+      animation: { duration: 1500 },
+      scales: {
+        r: { min: 0, max: 4 }
+      }
+    }
+  });
+}
+</script>
+
+</body>
+</html>
